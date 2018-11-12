@@ -166,8 +166,29 @@ MCL的一个限制是它的提议机制，即使用运动模型作为提议分�
 两种方法：一种将隐藏状态状态变量，由滤波器一同估计，数学上更泛化，但计算复杂度大，且变量的数量本身也是变量；另一种对传感器数据进行预处理，扔掉隐藏状态影响的测量数据，这种方法在特定受限的场景下工作良好。下面讨论第二种方法。
 
 思路是探究传感器测量的生成，然后拒绝掉有可能是受动态物体影响的测量数据。在第六章中说，测量模型由四种模型组成，即$p_{hit},p_{short},p_{max},p_{rand}$，其中$p_{short}$是与意料之外的物体相关联的。定义变量$\bar{c}_t^k$，可以分别取{hit，short，max，rand}四个值，那么根据贝叶斯定律，可以计算：
+
 $$p(\bar{c}_t^k=short|z_t^k,z_{1:t-1},u_{1:t},m)=\frac{p(z_t^k|\bar{c}_t^k=short,z_{1:t-1},u_{1:t},m)p(\bar{c}_t^k=short)}{\sum_cp(z_t^k|\bar{c}_t^k=c,z_{1:t-1},u_{1:t},m)p(\bar{c}_t^k=c)}$$
+
 上式中$p(z_t^k|\bar{c}_t^k=c,z_{1:t-1},u_{1:t},m)=\int p(z_t^k|x_t,\bar{c}_t^k=c,m)\bar{bel}(x_t)dx_t$。
+
 由于$p(z_t^k|x_t,\bar{c}_t^k=c,m)$可以简写为$p_{hit},p_{short},p_{max},p_{rand}$，所以可以得到想要的概率的表达式：
+
 $$p(\bar{c}_t^k=short|z_t^k,z_{1:t-1},u_{1:t},m)=\frac{\int p_{short}(z_t^k|x_t,m)z_{short}\bar{bel}(x_t)dx_t}{\int\Sigma_cp_c(z_t^k|x_t,m)z_c\bar{bel}(x_t)dx_t}$$
+
 上面这些积分没有closed-form解，为了计算，需要用代表后验概率$\bar{bel}(x_t)$的样本来近似，这些样本可以是可能性栅格，也可以是MCL中的粒子。如果某个测量的上述概率超过一定阈值，那么这个测量会被认做是受到动态物体影响，进而舍弃。
+
+下面给出一种结合了这种技巧的粒子滤波器：  
+××算法 test_range_measurement($z_t^k, \bar{\chi}_t, m):××  
+01····$p=q=0$  
+02····for $m=1$ to $M$ do  
+03········$p=p+z_{hit}\cdot p_{hit}(z_t^k|x_t^{[m]},m)$  
+04········$q=q+\sum_c z_c\cdot p_c(z_t^k|x_t^{[m]},m)$  
+05····endfor
+06····if $p/q \leq \chi$ then  
+07········return accept  
+08····else  
+09········return reject  
+10····endif
+
+
+
