@@ -64,7 +64,7 @@ $p(\bm{m}_i|z_{1:t},x_{1:t})=1-\frac{1}{1+\exp \{l_{t,i}\}}$
 算法中使用inverse_sensor_model(即$p(\bm{m}_i|z_t,x_t)$)来更新。  
 对于锥状测距传感器的逆测量模型为：  
 1. 如果不在测量范围内，则为$l_0$。
-2. 如果在，且$z_t^k < z_{max}$，且$|r-z_t^k|<\alpha/2$，则为$l_{occ}$  
+2. 如果在，且$z_t^k < z_{max}$，且$|r-z_t^k|<\alpha/2$，则为$l_{\text{occ}}$  
 3. 如果在，且$r\leq z_t^k$，则为$l_{free}$。  
 $l_0$是log概率比值比的先验，即$l_0=\log\frac{p(\bm{m}_i=1)}{p(\bm{m}_i=0)}$  
 
@@ -116,5 +116,40 @@ $p(\bm{m}_i|x,z)=\eta \int_{m:m(i)=\bm{m}_i}p(z|x,m)p(m_dm$$
 #### 3.3 误差函数
 
 为了训练函数，需要一个近似的误差函数，如使用BP算法的神经网络。  
-训练集的格式为：$input^{[i]} → occ(\bm{m}_i)^{[i]}$。  
+训练集的格式为：$\text{input}^{[i]} → \text{occ}(\bm{m}_i)^{[i]}$。  
 
+假设每个训练数据都相互独立，记函数近似器的参数为$W$，则训练集的可能性为
+$\Pi_i p(\bm{m}_i^{[k]}|\text{input}^{[k]},W)$;
+其log为$J(W)=\sum_i \log p(\bm{m}_i^{[k]}|\text{input}^{[k]},W)$。  
+训练即最小化函数值J。  
+
+记函数近似器为$f(\text{input}^{[k]}, W)$，输出为0到1之间的数（即占据可能性）；  
+也就是：  
+$$ p(\bm{m}_i^{[k]}|\text{input}^{[k]},W)=\left\{
+\begin{aligned}
+f(\text{input}^{[k]},W)\ \ \ \  & if \bm{m}_i^{[k]}=1 \\
+1 - f(\text{input}^{[k]},W)\ \ \ \  & if \bm{m}_i^{[k]}=0 
+\end{aligned}
+\right.
+$$
+即
+$$ p(\bm{m}_i^{[k]}|\text{input}^{[k]},W)=
+f(\text{input}^{[k]},W)^{\bm{m}_i^{[k]}}
+(1 - f(\text{input}^{[k]},W))^{1-\bm{m}_i^{[k]}}$$
+
+将上式带入前文$J(W)$的定义，可以得到误差函数：  
+$$J(W)=-\sum_i \bm{m}_i^{[k]}\log f(\text{input}^{[k]},W)
+              +(1-\bm{m}_i^{[k]})\log (1-f(\text{input}^{[k]},W))$$
+
+#### 3.4 更多考虑
+
+在样例中，输入的数据是极坐标系下的相对坐标。
+
+在写这本书的时候，学习逆向测量模型的工作较少。
+
+### 4. 最大后验占据栅格建图
+
+#### 4.1 维护相关性的情况(The Case for Maintaining Dependencies)
+
+前文假设地图可以解构成相互独立的小格子。  
+这样一个因数分解导致问题：
